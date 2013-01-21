@@ -1,0 +1,9 @@
+#/bin/sh
+##
+
+dir=$*
+if [ -z "$dir" ]; then
+	dir=*/Source
+fi
+
+find $dir -type f ! -path "*/Programs/*" -a ! -path "*/ThirdParty/*" -print0 | xargs -0 p4 fstat 2>&1 | awk '/no such file/{print $1}'

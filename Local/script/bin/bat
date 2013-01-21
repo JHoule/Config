@@ -1,0 +1,3 @@
+#/bin/sh
+##
+env -u PS1 -u TEMP -u TMP PWD=`cygpath -wa ${PWD}` $@
