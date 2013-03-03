@@ -1,0 +1,138 @@
+##
+# A Makefile to help install/refresh the various configuration files.
+##
+# Author: Jocelyn Houle <jocelyn.houle@gmail.com>
+#
+# Some notes:
+#
+# Organized things hierarchically while still allowing to call 'make' under
+# each subdirectory. Every sub-Makefile reuses stuff from the common Makefile.
+##
+
+#############
+# Variables #
+#######################################################################
+
+# Tools.
+CP         := cp
+DOWNLOAD   := curl -O
+#DOWNLOAD   := wget
+GREP       := grep
+#MAKE       := make
+MKDIR      := mkdir
+MV         := mv
+NOTHING    := echo -n
+TAR        := tar
+TOUCH      := touch
+UNZIP      := unzip
+
+ifndef PLATFORM
+   PLATFORM := $(shell uname)
+endif
+
+ALL_TARGETS := Git Local ZShell
+
+# A literal space.
+space :=
+space +=
+
+
+#############
+# Functions #
+#######################################################################
+
+# Copies $(1) into $(2), making sure the destination directory exists.
+define COPYFILE
+$(2): $(1)
+	@$(MKDIR) -p "$$(dir $$@)"
+	$(CP) "$$^" "$$@"
+endef
+
+# Copies $(1) into $(2), making sure the destination directory exists.
+# Does not include dependency; always executed.
+define COPYFILE_NODEP
+$(2): always
+	echo =$$@=$(1)=$(2)=
+	@$(MKDIR) -p "$$(dir $$@)"
+	$(CP) "$(1)" "$$@"
+endef
+
+# Copies $(1) into $(2), making sure the destination directory exists.
+copyfile = $(shell $(MKDIR) -p "$(dir $(2))" && $(CP) "$(1)" "$(2)")
+
+# Copies files $(3) from source directory $(1) into destination directory $(2).
+# It guarantees that destination subdirectories exist.
+define COPYFILES
+$(2): $(1)
+	@$(MKDIR) -p "$$(dir $$@)"
+	$(CP) "$$^" "$$@"
+endef
+
+# Defines target $(1) with dependencies $(2).
+define GENDEPS
+$(1): $(2)
+endef
+
+# === BROKEN ===
+# Defines a series of rules with prefix $(1) to copy a list of files $(2)
+# from directory $(3) into directory $(4), and vice versa.
+# The following rules will be created:
+#   $(1).install: Copies from $(2) into $(3).
+#   $(1).refresh: Copies from $(3) into $(2) (requires submake to avoid circular dependencies).
+define GEN_INSTALL_REFRESH =
+
+ifndef DO_REFRESH
+
+# Generate $(3)->$(4) copy rules.
+$(foreach f,$(2),$(eval $(call COPYFILE,$(3)/$(f),$(4)/$(f))))
+
+#git.install: $(2:%=$(4)/%)
+$(1).install: $(patsubst %,$(4)/%,$(2))
+	@echo INSTALL=$$^=
+
+$(1).refresh: always
+	@echo REFRESH1=$$^=
+	$(MAKE) DO_REFRESH=1 $(1).refresh
+
+else
+
+# Generate $(4)->$(3) copy rules.
+#$(foreach f,$(2),$(eval $(call COPYFILE,$(4)/$(f),$(3)/$(f))))
+
+$(1).refresh: $(2:%=$(3)/%)
+	@echo REFRESH2=$$^=
+
+endif
+
+endef #GEN_INSTALL_REFRESH
+
+# Returns a list of relative file paths excluding some files.
+#   1. The directory into which we search for files.
+#   2. An optional list of excluded files.
+# Sample usage:
+#   MY_FILES := $(call findfiles,$(CURDIR),Makefile Makefile.bak)
+findfiles = $(subst $(1),,$(shell test -e $(1) && find $(1) -type f -and -not \( -false $(2:%=-or -name %) \) ))
+
+# Joins elements of the list in arg 2 with the given separator.
+#   1. Element separator.
+#   2. The list.
+join-with = $(subst $(space),$1,$(strip $2))
+
+
+############
+# Commands #
+#######################################################################
+
+default: help
+
+# Fake phony rule to allow extension rules to be phony.
+# That allows, for example, things like 'make file.view' even if
+# a file of that name exists.
+.PHONY: always
+always:
+	@$(NOTHING)
+
+all: $(ALL_TARGETS)
+
+#%: always
+#	$(MAKE) -C $*

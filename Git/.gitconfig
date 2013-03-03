@@ -8,7 +8,7 @@
 	st = status
 	br = branch
 	mg = merge --no-commit
-	lg = log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>'
+	lg = log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --
 
 [color]
 	ui = auto
@@ -16,3 +16,10 @@
 [core]
 	autocrlf = false
 	fileMode = false
+	excludesfile = ~/.gitignore
+
+[gui]
+	editor = subl
+
+[push]
+	default = upstream

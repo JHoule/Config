@@ -1,0 +1,30 @@
+# Default values and rules when SRC_DIR and DST_DIR (and opt. FILES) are specified.
+
+ifndef SRC_DIR
+SRC_DIR := $(CURDIR)
+endif
+
+ifndef DST_DIR
+DST_DIR := $(HOME)
+endif
+
+#ifndef FILES
+FILES := $(call findfiles,$(SRC_DIR)/,Makefile)
+#endif
+
+ifndef DO_REFRESH
+# Generate local->home copy rules.
+$(foreach f,$(FILES),$(eval $(call COPYFILE,$(SRC_DIR)/$(f),$(DST_DIR)/$(f))))
+install: $(FILES:%=$(DST_DIR)/%)
+refresh: always
+	@$(MAKE) --no-print-directory DO_REFRESH=1 refresh
+else
+# Generate home->local copy rules.
+$(foreach f,$(FILES),$(eval $(call COPYFILE,$(DST_DIR)/$(f),$(SRC_DIR)/$(f))))
+refresh: $(FILES:%=$(SRC_DIR)/%)
+endif
+
+debug:
+	@echo "SRC_DIR='${SRC_DIR}'"
+	@echo "DST_DIR='${DST_DIR}'"
+	@echo "FILES='${FILES}'"
