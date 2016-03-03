@@ -1,0 +1,190 @@
+
+autoload -U colors && colors
+
+
+# Powerline Special Characters.
+CHAR_POWERLINE_SEP_RIGHT_FILLED="" # \ue0b0
+CHAR_POWERLINE_SEP_RIGHT="" # \ue0b1
+CHAR_POWERLINE_SEP_LEFT_FILLED=""  # \ue0b2
+CHAR_POWERLINE_SEP_LEFT=""  # \ue0b3
+CHAR_POWERLINE_BRANCH="" # \ue0a0
+
+
+# Unicode Special Characters.
+CHAR_PLUS_MINUS_SIGN="±" # \u00b1
+CHAR_GEAR="⚙" # \u2699
+CHAR_WARNING="⚠" # \u26a0
+CHAR_HIGH_VOLTAGE="⚡" # \u26a1
+CHAR_CHECK_HEAVY="✔" # \u2714
+CHAR_BALLOT_HEAVY="✘" # \u2718
+CHAR_ARROW_UP_RIGHT="➦" # \u27a6
+
+
+##
+# https://en.wikibooks.org/wiki/Unicode/List_of_useful_symbols
+# https://en.wikipedia.org/wiki/Geometric_Shapes
+# http://www.alanflavell.org.uk/unicode/unidata25.html
+
+# ⏪ 23EA Black left-pointing double triangle
+# ⏩ 23E9 Black right-pointing double triangle
+# ⏫ 23EB Black up-pointing double triangle
+# ⏬ 23EC Black down-pointing double triangle
+# ⏭ 23ED Black right-pointing pointer double triangle with vertical bar
+# ⏮ 23EE Black left-pointing pointer double triangle with vertical bar
+# ► 25BA Black right-pointing pointer
+# ◄ 25C4 Black left-pointing pointer
+# ▲ 25B2 Black up-pointing triangle
+# ▼ 25BC Black down-pointing triangle
+# △ 25B3 White up-pointing triangle
+# ▽ 25BD White down-pointing triangle
+# ◉ 25C9 Fisheye
+# ◎ 25CE Bullseye
+# ✂ 2702 Black Scissors
+# ✄ 2704 White Scissors
+# ✅ 2705 White heavy check mark
+# ✓ 2713 Check mark
+# ✔ 2714 Heavy check mark
+# ✕ 2715 Multiplication
+# ✖ 2716 Heavy multiplication
+# ✗ 2717 Ballot X
+# ✘ 2718 Heavy ballot X
+# ❌ 274C Cross mark
+
+# ⋮ 22EE vellip, vertical ellipsis
+# ⋯ 22EF hellip, horizontal ellipsis
+# ⋰ 22F0 utdot, rising dots, up right diagonal ellipsis
+# ⋱ 22F1 dtdot, falling dots, down right diagonal ellipsis
+# 〈 27E8 lang , left angle bracket
+# 〉 27E9 rang, right angle bracket
+
+# ←	 2190 left arrow
+# ↑	 2191 up arrow
+# →	 2192 right arrow
+# ↓	 2193 down arrow
+# ⏎	 23CE carriage return symbol
+# ⌫	 232B erase to the left (backspace)
+# ␣	 2423 space symbol
+# □	 25A1 square
+# ★	 2605 starf, bigstar, black star
+# ☆	 2606 white star
+# ⛤	 26E4 pentagram
+# ☐	 2610 ballot box
+# ☑	 2611 ballot box with check
+# ☒	 2612 ballot box with X
+# ☛	 261B black right pointing finger
+# ☞	 261E white right pointing finger
+# ⚜	 269C fleur-de-lys
+# ✓	 2713 check mark
+# ✗	 2717 cross mark
+# ⸺	 2E3A two-em dash
+# ⸻	 2E3B three-em dash
+# 〃	 3003 ditto
+
+# 🌑 1F311 new moon
+# 🌓 1F313 first quarter moon
+# 🌕 1F315 full moon
+# 🌗 1F317 last quarter moon
+# 🌙 1F319 crescent moon
+# 🌠 1F320 shooting star
+
+
+#
+# 16 Terminal Colors
+# -- ---------------
+#  0 black
+#  1 red
+#  2 green
+#  3 yellow
+#  4 blue
+#  5 magenta
+#  6 cyan
+#  7 white
+#  8 bright black
+#  9 bright red
+# 10 bright green
+# 11 bright yellow
+# 12 bright blue
+# 13 bright magenta
+# 14 bright cyan
+# 15 bright white
+#
+function jph_colstr {
+	# jph_colstr 1:string_to_print 2:fg_color 3:bg_color
+	# jph_colstr "JPH" red green
+	local str="%{%F{$2}%K{$3}%}$1%{%k%f%}"
+	echo -n $str
+	#echo -n $1 # Removes formatting (for debugging).
+}
+
+function jph_refresh_rprompt {
+	sleep 1
+	JPH_RPROMPT=$(date)_%F{2}%f_$$
+}
+
+function jph_refresh_rprompt_async {
+	# Clear RPROMPT if desired.
+	if [[ "$JPH_RPROMPT_ASYNC_CLEAR" = true ]]; then
+		RPROMPT=
+	fi
+
+	# Kill any outstanding process.
+	if (( JPH_RPROMPT_PID > 0 )); then
+		kill -KILL "$JPH_RPROMPT_PID" &>/dev/null
+		JPH_RPROMPT_PID=0
+	fi
+
+	# Launch new backround process, keeping its pid.
+	_jph_refresh_rprompt_async &!
+	JPH_RPROMPT_PID=$!
+}
+
+function _jph_refresh_rprompt_async {
+	# Compute a new RPROMPT value.
+	jph_refresh_rprompt
+
+	# Store in a temp file (because we are a subprocess job, so wrong RPROMPT variable).
+	printf "%s" $JPH_RPROMPT > ${JPH_RPROMPT_TMPFILE}
+	#cat ${JPH_RPROMPT_TMPFILE}
+
+	# Signal shell using a window resize signal.
+	kill -WINCH $$
+}
+
+function jph_do_refresh_prompt {
+	# Refresh RPROMPT variable.
+	if [[ -e "${JPH_RPROMPT_TMPFILE}" ]]; then
+		RPROMPT=$(cat "${JPH_RPROMPT_TMPFILE}")
+	fi
+
+	# Redisplay prompt.
+	zle && zle reset-prompt
+}
+
+function jph_precmd {
+	# Print pre-prompt, if any.
+	if [[ ! -z ${JPH_PPROMPT} ]]; then
+		print -rP ${JPH_PPROMPT}
+	fi
+
+	# Refresh async rprompt, if any.
+	if [[ "$JPH_RPROMPT_ASYNC" = true && ! -z "$JPH_RPROMPT" ]]; then
+		jph_refresh_rprompt_async
+	fi
+}
+
+function jph_init {
+	#echo DBG_JPH_INIT
+	PROMPT=${JPH_PROMPT}
+	RPROMPT=${JPH_RPROMPT}
+	function precmd { jph_precmd }
+
+	if [[ ! -z "$JPH_RPROMPT" ]]; then
+		if [[ "$JPH_RPROMPT_ASYNC" = true ]]; then
+			JPH_RPROMPT_TMPFILE="${TMPPREFIX}_jph_rprompt"
+			trap jph_do_refresh_prompt WINCH
+			jph_refresh_rprompt_async
+		fi
+	#else
+	#	echo "Ignoring RPROMPT settings."
+	fi
+}
